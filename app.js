@@ -61,6 +61,7 @@ let S = { weeks: {}, groups: [], territories: [], view: null },
   ed = null,
   lyr = {},
   fitted = false;
+
 /* ---- admin ---- */
 const isAdmin = () => localStorage.getItem("admin") === "1";
 const setAdmin = (v) => {
@@ -69,38 +70,18 @@ const setAdmin = (v) => {
   location.reload();
 };
 const EDIT_ACTS = [
-  "addout",
-  "editout",
-  "dupout",
-  "delout",
-  "up",
-  "down",
-  "cpday",
-  "docp",
-  "bulk",
-  "tools",
-  "cp1",
-  "cpn",
-  "cpm",
-  "cpf",
-  "newg",
-  "editg",
-  "delg",
-  "newt",
-  "editt",
-  "delt",
-  "newm",
-  "draw",
-  "vedit",
-  "rmgeo",
-  "undo",
-  "fin",
-  "cdr",
-  "sved",
-  "ced",
-  "exp",
-  "imp",
+  "addout", "editout", "dupout", "delout", "up", "down",
+  "cpday", "docp", "bulk", "tools", "cp1", "cpn", "cpm", "cpf",
+  "newg", "editg", "delg", "newt", "editt", "delt", "newm",
+  "draw", "vedit", "rmgeo", "undo", "fin", "cdr", "sved", "ced",
+  "exp", "imp",
 ];
+
+/* ---- jsonbin ---- */
+const JSONBIN_ID = "6afd0d71ffd5d16053ca2246";
+const JSONBIN_KEY = "$2a$10$/jt6fO/U71TfMoElGEs8suPiR78r0vDXtsq.aQy4qp/wDien3llZq";
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+
 /* ---- fechas ---- */
 const iso = (d) =>
   d.getFullYear() +
@@ -140,7 +121,8 @@ const refM = () => {
   const r = addD(cur, 3);
   return [r.getFullYear(), r.getMonth()];
 };
-/* ---- almacenamiento (IndexedDB) ---- */
+
+/* ---- almacenamiento (IndexedDB local) ---- */
 const idb = () =>
   new Promise((res, rej) => {
     const r = indexedDB.open("salidas-territorios", 1);
@@ -157,7 +139,24 @@ const kv = async (mode, fn) => {
     t.onerror = () => rej(t.error);
   });
 };
+
+/* ---- cargar y guardar con JSONBin ---- */
 async function load() {
+  try {
+    const res = await fetch(JSONBIN_URL + "?meta=false", {
+      headers: { "X-Master-Key": JSONBIN_KEY },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.weeks && data.territories) {
+        S = norm(data);
+        await kv("readwrite", (o) => o.put(S, "state"));
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn("Fallo al leer de la nube, usando local.");
+  }
   try {
     const s = await kv("readonly", (o) => o.get("state"));
     if (s) S = norm(s);
@@ -165,17 +164,33 @@ async function load() {
     toast("No se pudo leer el almacenamiento del navegador");
   }
 }
+
 let tm;
 const save = () => {
   clearTimeout(tm);
-  tm = setTimeout(
-    () =>
-      kv("readwrite", (o) => o.put(S, "state")).catch(() =>
-        toast("Error al guardar los datos"),
-      ),
-    200,
-  );
+  tm = setTimeout(async () => {
+    try {
+      await kv("readwrite", (o) => o.put(S, "state"));
+    } catch (e) {
+      toast("Error al guardar localmente");
+    }
+    if (isAdmin()) {
+      try {
+        await fetch(JSONBIN_URL, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": JSONBIN_KEY,
+          },
+          body: JSON.stringify(S),
+        });
+      } catch (e) {
+        toast("Error al sincronizar con la nube");
+      }
+    }
+  }, 200);
 };
+
 /* ---- utilidades ---- */
 const T = (id) => S.territories.find((t) => t.id === id),
   uid = () =>
@@ -263,6 +278,7 @@ function mkMap(el, t, full) {
   m.fitBounds(g.getBounds(), { padding: [14, 14] });
   return m;
 }
+
 /* ---- navegación ---- */
 function go(v) {
   if (dr) endDraw();
@@ -284,6 +300,7 @@ $("#nav").onclick = (e) => {
   const v = e.target.dataset.v;
   v && go(v);
 };
+
 /* ---- SALIDAS ---- */
 const eachOut = (f) =>
   Object.values(S.weeks).forEach((w) =>
@@ -529,6 +546,7 @@ function bulk() {
     },
   );
 }
+
 /* ---- GRUPOS ---- */
 function rGrp() {
   $("#v-grupos").innerHTML =
@@ -583,6 +601,7 @@ function delG(id) {
   save();
   render();
 }
+
 /* ---- TERRITORIOS ---- */
 function rTerr() {
   const wk = S.weeks[iso(cur || (cur = mon(new Date())))] || {};
@@ -673,6 +692,7 @@ function delT(id) {
   close();
   render();
 }
+
 /* ---- MAPA MAESTRO ---- */
 function initMap() {
   if (M) return;
@@ -856,6 +876,7 @@ function endEdit() {
   panel();
   bar();
 }
+
 /* ---- respaldo ---- */
 const cnt = (d) => {
   let n = 0;
@@ -915,6 +936,7 @@ $("#imp").onchange = async (e) => {
     toast("El archivo no es un respaldo válido");
   }
 };
+
 /* ---- eventos ---- */
 const fo = (b) => {
   const a = dayArr(iso(cur), +b.dataset.i);
@@ -1047,6 +1069,7 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   A[b.dataset.act](b);
 });
+
 /* ---- activar/desactivar admin ---- */
 if (new URLSearchParams(location.search).get("admin") === "1") {
   setAdmin(true);
@@ -1058,6 +1081,7 @@ if (isAdmin()) {
   btn.onclick = () => setAdmin(false);
   document.querySelector(".bk").appendChild(btn);
 }
+
 (async () => {
   await load();
   fixRefs();
