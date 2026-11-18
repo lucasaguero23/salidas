@@ -70,17 +70,44 @@ const setAdmin = (v) => {
   location.reload();
 };
 const EDIT_ACTS = [
-  "addout", "editout", "dupout", "delout", "up", "down",
-  "cpday", "docp", "bulk", "tools", "cp1", "cpn", "cpm", "cpf",
-  "newg", "editg", "delg", "newt", "editt", "delt", "newm",
-  "draw", "vedit", "rmgeo", "undo", "fin", "cdr", "sved", "ced",
-  "exp", "imp",
+  "addout",
+  "editout",
+  "dupout",
+  "delout",
+  "up",
+  "down",
+  "cpday",
+  "docp",
+  "bulk",
+  "tools",
+  "cp1",
+  "cpn",
+  "cpm",
+  "cpf",
+  "newg",
+  "editg",
+  "delg",
+  "newt",
+  "editt",
+  "delt",
+  "newm",
+  "draw",
+  "vedit",
+  "rmgeo",
+  "undo",
+  "fin",
+  "cdr",
+  "sved",
+  "ced",
+  "exp",
+  "imp",
 ];
 
 /* ---- jsonbin ---- */
 const JSONBIN_ID = "6afd0d71ffd5d16053ca2246";
-const JSONBIN_KEY = "$2a$10$/jt6fO/U71TfMoElGEs8suPiR78r0vDXtsq.aQy4qp/wDien3llZq";
-const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+const JSONBIN_KEY =
+  "$2a$10$/jt6fO/U71TfMoElGEs8suPiR78r0vDXtsq.aQy4qp/wDien3llZq";
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}/latest`;
 
 /* ---- fechas ---- */
 const iso = (d) =>
@@ -143,11 +170,14 @@ const kv = async (mode, fn) => {
 /* ---- cargar y guardar con JSONBin ---- */
 async function load() {
   try {
-    const res = await fetch(JSONBIN_URL + "?meta=false", {
+    const res = await fetch(JSONBIN_URL, {
       headers: { "X-Master-Key": JSONBIN_KEY },
     });
     if (res.ok) {
-      const data = await res.json();
+      const responseData = await res.json();
+      // JSONBin envuelve los datos en "record" cuando pedimos /latest
+      const data = responseData.record;
+
       if (data && data.weeks && data.territories) {
         S = norm(data);
         await kv("readwrite", (o) => o.put(S, "state"));
@@ -176,7 +206,9 @@ const save = () => {
     }
     if (isAdmin()) {
       try {
-        await fetch(JSONBIN_URL, {
+        // Para guardar usamos la URL base, sin el /latest
+        const putUrl = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+        await fetch(putUrl, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
