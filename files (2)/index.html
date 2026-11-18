@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Salidas y territorios</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Salidas y territorios</h1>
+      <nav id="nav">
+        <button data-v="salidas" class="on">Salidas</button
+        ><button data-v="grupos">Grupos</button
+        ><button data-v="terr">Territorios</button
+        ><button data-v="mapa">Mapa maestro</button>
+      </nav>
+      <div class="bk">
+        <button class="ib" data-act="exp">⬇ Respaldo</button
+        ><button class="ib" data-act="imp">⬆ Restaurar</button
+        ><input type="file" id="imp" accept=".json,application/json" hidden />
+      </div>
+    </header>
+    <main>
+      <section id="v-salidas"></section>
+      <section id="v-grupos" hidden></section>
+      <section id="v-terr" hidden></section>
+      <section id="v-mapa" hidden>
+        <div class="mm">
+          <div class="mw">
+            <div id="map"></div>
+            <div id="bar" hidden></div>
+          </div>
+          <aside id="panel"></aside>
+        </div>
+      </section>
+    </main>
+    <footer>
+      Los datos se guardan solo en este navegador (no se sincronizan entre
+      dispositivos). Exportá un respaldo con frecuencia.
+    </footer>
+    <dialog id="dlg"></dialog>
+    <div id="toast"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
